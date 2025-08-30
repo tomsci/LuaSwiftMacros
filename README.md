@@ -111,6 +111,35 @@ struct Foo : Equatable {
 }
 ```
 
+## Including in your project
+
+To include in your project, use a Package.swift file something like this:
+
+```swift
+// swift-tools-version: 6.1
+import PackageDescription
+
+let package = Package(
+    name: "ExampleLuaSwiftProj",
+    platforms: [
+        .macOS(.v10_15)
+    ],
+    dependencies: [
+        .package(url: "https://github.com/tomsci/LuaSwift.git", branch: "main"),
+        .package(url: "https://github.com/tomsci/LuaSwiftMacros.git", branch: "main"),
+    ],
+    targets: [
+        .executableTarget(
+            name: "ExampleLuaSwiftProj",
+            dependencies: [
+                .product(name: "Lua", package: "LuaSwift"),
+                .product(name: "LuaMacros", package: "LuaSwiftMacros"),
+            ]
+        )
+    ]
+)
+```
+
 ## License
 
 LuaSwiftMacros is written and maintained by Tom Sutcliffe and is distributed under the [MIT License](LICENSE).
