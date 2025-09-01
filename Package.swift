@@ -20,6 +20,7 @@ let package = Package(
         .package(url: "https://github.com/tomsci/LuaSwift.git", branch: "main"),
         // .package(path: "LuaSwift"),
         .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "601.0.0-latest"),
+        .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.4.3"),
     ],
     targets: [
         .macro(
