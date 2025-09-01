@@ -1,6 +1,6 @@
 # LuaSwiftMacros
 
-This is a companion project to https://github.com/tomsci/LuaSwift/ which uses Swift macros to automate the boilerplate of declaring metatables for swift types that are intended to be Bridged into Lua. See [Bridging a Swift object into Lua](https://tomsci.github.io/LuaSwift/documentation/lua/bridgingswifttolua/) for more details.
+This is a companion project to https://github.com/tomsci/LuaSwift/ which uses Swift macros to automate the boilerplate of declaring metatables for Swift types that are intended to be Bridged into Lua. See [Bridging a Swift object into Lua](https://tomsci.github.io/LuaSwift/documentation/lua/bridgingswifttolua/) for more details.
 
 Using just LuaSwift, the shortest declaration for a metatable for a given struct would look something like this, using `PushableWithMetatable` and providing a `metatable` definition:
 
@@ -25,6 +25,7 @@ import LuaMacros
 @Pushable
 struct Foo {
     public func hello() -> String { return "world!" }
+    // @Pushable adds a `metatable` definition here identical to the above.
 }
 ```
 
@@ -144,6 +145,10 @@ let package = Package(
 ## API compatibility
 
 The LuaSwiftMacros project is at an early stage and the API may change without warning. At any given time the head of the main branch will be tested with the head of main branch of LuaSwift, and no compatibility beyond that is guaranteed at this point. It is tested with Swift 6.1 only -- earlier versions definitely will not work, later versions may.
+
+## More information
+
+See the [LuaMacros documentation](https://tomsci.github.io/LuaSwiftMacros/documentation/luamacros).
 
 ## License
 
