@@ -22,8 +22,39 @@ import Lua
 ///     }
 /// }
 /// ```
-@attached(extension, conformances: PushableWithMetatable, names: named(metatable))
+@attached(member, names: named(metatable))
+@attached(extension, conformances: PushableWithMetatable)
 public macro Pushable() = #externalMacro(module: "LuaMacrosImpl", type: "PushableMacro")
+
+
+/// A macro that generates a metatable for a class whose parent conforms to `PushableWithMetatable`.
+///
+/// This is similar to ``Pushable()`` but specifically for subclasses. The `Parent` class type parameter should be the
+/// type of the superclass with the metatable. For example:
+///
+/// ```swift
+/// @Pushable
+/// class BaseClass {
+///     public func test() -> String {
+///         return "Base"
+///     }
+/// }
+/// 
+/// @PushableSubclass<BaseClass>
+/// class DerivedClass: BaseClass {
+///     override func test() -> String {
+///         return "Derived"
+///     }
+/// 
+///     public func derivedfn() {}
+/// }
+/// ```
+///
+/// The macro assumes that `Parent` has a `metatable` that was added by `@Pushable` or `@PushableSubclass`. Unlike
+/// `@Pushable`, it does not add an extension with conformance to `PushableWithMetatable` (because the superclass should
+/// already have done that).
+@attached(member, names: named(metatable))
+public macro PushableSubclass<Parent>() = #externalMacro(module: "LuaMacrosImpl", type: "PushableMacro")
 
 /// A macro that can hide or rename a symbol from being bridged in a metatable.
 ///

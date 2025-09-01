@@ -33,14 +33,15 @@ final class LuaSwiftMacrosTests: XCTestCase {
             expandedSource: #"""
             struct Foo {
                 public let member: String
-            }
 
-            extension Foo : PushableWithMetatable {
                 static var metatable: Metatable<Foo> {
                     .init(fields: [
                             "member": .property(\.member)
                         ])
                 }
+            }
+
+            extension Foo: PushableWithMetatable {
             }
             """#,
             macros: testMacros)
@@ -56,14 +57,15 @@ final class LuaSwiftMacrosTests: XCTestCase {
             expandedSource: #"""
             struct Foo {
                 public var member: String
-            }
 
-            extension Foo : PushableWithMetatable {
                 static var metatable: Metatable<Foo> {
                     .init(fields: [
                             "member": .property(\.member)
                         ])
                 }
+            }
+
+            extension Foo: PushableWithMetatable {
             }
             """#,
             macros: testMacros)
@@ -79,14 +81,15 @@ final class LuaSwiftMacrosTests: XCTestCase {
             expandedSource: #"""
             struct Foo {
                 public var `public`: String
-            }
 
-            extension Foo : PushableWithMetatable {
                 static var metatable: Metatable<Foo> {
                     .init(fields: [
                             "public": .property(\.public)
                         ])
                 }
+            }
+
+            extension Foo: PushableWithMetatable {
             }
             """#,
             macros: testMacros)
@@ -102,14 +105,15 @@ final class LuaSwiftMacrosTests: XCTestCase {
             expandedSource: #"""
             struct Foo<T> {
                 public var prop: T
-            }
 
-            extension Foo : PushableWithMetatable {
                 static var metatable: Metatable<Foo> {
                     .init(fields: [
                             "prop": .property(\.prop)
                         ])
                 }
+            }
+
+            extension Foo: PushableWithMetatable {
             }
             """#,
             macros: testMacros)
@@ -125,14 +129,15 @@ final class LuaSwiftMacrosTests: XCTestCase {
             expandedSource: #"""
             struct Foo {
                 public static let member = "woop"
-            }
 
-            extension Foo : PushableWithMetatable {
                 static var metatable: Metatable<Foo> {
                     .init(fields: [
                             "member": .constant(Foo.member)
                         ])
                 }
+            }
+
+            extension Foo: PushableWithMetatable {
             }
             """#,
             macros: testMacros)
@@ -148,9 +153,7 @@ final class LuaSwiftMacrosTests: XCTestCase {
             expandedSource: #"""
             struct Foo {
                 public static var member: String { "woop" }
-            }
 
-            extension Foo : PushableWithMetatable {
                 static var metatable: Metatable<Foo> {
                     .init(fields: [
                             "member": .staticvar {
@@ -158,6 +161,9 @@ final class LuaSwiftMacrosTests: XCTestCase {
                                 }
                         ])
                 }
+            }
+
+            extension Foo: PushableWithMetatable {
             }
             """#,
             macros: testMacros)
@@ -179,9 +185,7 @@ final class LuaSwiftMacrosTests: XCTestCase {
                 public func namedArg(arg: Int) { }
                 public func anonArg(_ arg: String) -> String { return arg }
                 public func mixedArgs(arg1: Int, _ arg2: Int, arg3: Int) { }
-            }
 
-            extension Foo : PushableWithMetatable {
                 static var metatable: Metatable<Foo> {
                     .init(fields: [
                             "noargs": .memberfn {
@@ -199,6 +203,35 @@ final class LuaSwiftMacrosTests: XCTestCase {
                         ])
                 }
             }
+
+            extension Foo: PushableWithMetatable {
+            }
+            """#,
+            macros: testMacros)
+    }
+
+    func testStaticFn() throws {
+        assertMacroExpansion(
+            """
+            @Pushable struct Foo {
+                public static func noargs() -> Bool { return true }
+            }
+            """,
+            expandedSource: #"""
+            struct Foo {
+                public static func noargs() -> Bool { return true }
+
+                static var metatable: Metatable<Foo> {
+                    .init(fields: [
+                            "noargs": .staticfn {
+                                    Foo.noargs()
+                                }
+                        ])
+                }
+            }
+            
+            extension Foo: PushableWithMetatable {
+            }
             """#,
             macros: testMacros)
     }
@@ -209,13 +242,15 @@ final class LuaSwiftMacrosTests: XCTestCase {
             @Pushable struct EqThing: Equatable {}
             """,
             expandedSource: #"""
-            struct EqThing: Equatable {}
+            struct EqThing: Equatable {
 
-            extension EqThing : PushableWithMetatable {
                 static var metatable: Metatable<EqThing> {
                     .init(fields: [:],
                         eq: .synthesize)
                 }
+            }
+
+            extension EqThing: PushableWithMetatable {
             }
             """#,
             macros: testMacros)
@@ -232,13 +267,14 @@ final class LuaSwiftMacrosTests: XCTestCase {
             expandedSource: #"""
             struct NotEq: Equatable {
                 private static var metafield_eq: Metatable<NotEq>.EqType { .none }
-            }
 
-            extension NotEq : PushableWithMetatable {
                 static var metatable: Metatable<NotEq> {
                     .init(fields: [:],
                         eq: .none)
                 }
+            }
+
+            extension NotEq: PushableWithMetatable {
             }
             """#,
             macros: testMacros)
@@ -263,9 +299,7 @@ final class LuaSwiftMacrosTests: XCTestCase {
                 public var nope: String
                 public func yepFn() {}
                 public func nopeFn() {}
-            }
-            
-            extension Foo : PushableWithMetatable {
+
                 static var metatable: Metatable<Foo> {
                     .init(fields: [
                             "yep": .property(\.yep),
@@ -274,6 +308,9 @@ final class LuaSwiftMacrosTests: XCTestCase {
                                 }
                         ])
                 }
+            }
+            
+            extension Foo: PushableWithMetatable {
             }
             """#,
             macros: testMacros)
@@ -298,9 +335,7 @@ final class LuaSwiftMacrosTests: XCTestCase {
                 private var nope: String
                 public func yepFn() {}
                 private func nopeFn() {}
-            }
-            
-            extension Foo : PushableWithMetatable {
+
                 static var metatable: Metatable<Foo> {
                     .init(fields: [
                             "yep": .property(\.yep),
@@ -313,6 +348,9 @@ final class LuaSwiftMacrosTests: XCTestCase {
                                 }
                         ])
                 }
+            }
+            
+            extension Foo: PushableWithMetatable {
             }
             """#,
             macros: testMacros)

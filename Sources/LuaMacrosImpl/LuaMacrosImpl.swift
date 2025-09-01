@@ -164,6 +164,20 @@ extension PushableMacro: ExtensionMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
+        return [try ExtensionDeclSyntax(
+            """
+            extension \(type): PushableWithMetatable {}
+            """)]
+    }
+}
+
+extension PushableMacro: MemberMacro {
+    public static func expansion(
+      of node: AttributeSyntax,
+      providingMembersOf decl: some DeclGroupSyntax,
+      conformingTo protocols: [TypeSyntax],
+      in context: some MacroExpansionContext
+    ) throws -> [DeclSyntax] {
 
         func diagnostic(_ message: String, severity: DiagnosticSeverity = .error, at node: some SyntaxProtocol) {
             Self.diagnostic(message, severity: severity, at: node, context: context)
@@ -182,20 +196,23 @@ extension PushableMacro: ExtensionMacro {
             metaFields[k] = v
         }
 
-        // Gather any overrides to fields or metafields
+        var parentType: String? = nil
+        let genericParams = node.attributeName.as(IdentifierTypeSyntax.self)?.genericArgumentClause?.arguments
+        if let genericParams {
+            if genericParams.count != 1 {
+                diagnostic("Expected @PushableSubclass<ParentType>", at: node)
+                return []
+            }
+            parentType = genericParams.first!.argument.as(IdentifierTypeSyntax.self)?.name.text
+        }
+
+        // // Gather any overrides to fields or metafields
         // if case .argumentList(let params) = node.arguments {
         //     for param in params {
-        //        if param.label == "fields" {
-        //            if let dict = param.expression.as(DictionaryExprSyntax.self),
-        //               case .elements(let elements) = dict.content {
-        //                for element in elements {
-        //                    addField("\(element.key)", "\(element.value)")
-        //                }
-        //            }
-        //        } else {
-        //            addMetafield("\(param.label!)", "\(param.expression)")
-        //        }
-        //    }
+        //         if param.label == "parent" {
+        //             parentExpr = param.expression
+        //         }
+        //     }
         // }
 
         let structDecl = decl.as(StructDeclSyntax.self)
@@ -204,6 +221,11 @@ extension PushableMacro: ExtensionMacro {
 
         guard let typeName = structDecl?.name.text ?? classDecl?.name.text else {
             diagnostic("@Pushable must be attached to a struct or class", at: decl)
+            return []
+        }
+
+        if parentType != nil && classDecl == nil {
+            diagnostic("@PushableSubclass<ParentType> can only be applied to a class declaration", at: node)
             return []
         }
 
@@ -334,13 +356,15 @@ extension PushableMacro: ExtensionMacro {
             }
         }
 
-        return [try ExtensionDeclSyntax(
-            """
-            extension \(type) : PushableWithMetatable {
-                \(raw: varType) var metatable: Metatable<\(raw: typeName)> { .init(\(raw: initArgs.joined(separator: ",\n")))
-                }
-            }
-            """)]
+        if let parentType {
+            return [
+                "class override var metatable: Metatable<\(raw: parentType)> { \(raw: parentType).metatable.subclass(type: \(raw: typeName).self, \(raw: initArgs.joined(separator: ",\n")))}"
+            ]
+        } else {
+            return [
+                "\(raw: varType) var metatable: Metatable<\(raw: typeName)> { .init(\(raw: initArgs.joined(separator: ",\n")))}"
+            ]
+        }
     }
 }
 

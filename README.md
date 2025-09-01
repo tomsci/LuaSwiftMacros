@@ -37,6 +37,7 @@ The `@Pushable` macro adds conformance to `PushableWithMetatable` and a `metatab
 * Both computed and stored member properties are supported. Static stored (`static let foo = ...`) and computed properies (`static var foo { ... }`) are also supported.
 * Functions with generic parameters are not supported and will be skipped over.
 * It is possible that the `@Pushable` macro will produce something that doesn't compile; please report this if you encounter it.
+* Use `@PushableSubclass<ParentType>` to define metatables for subclasses where the parent class already is `Pushable`.
 
 ## Controlling field visibility with `@Lua`
 
@@ -139,6 +140,10 @@ let package = Package(
     ]
 )
 ```
+
+## API compatibility
+
+The LuaSwiftMacros project is at an early stage and the API may change without warning. At any given time the head of the main branch will be tested with the head of main branch of LuaSwift, and no compatibility beyond that is guaranteed at this point. It is tested with Swift 6.1 only -- earlier versions definitely will not work, later versions may.
 
 ## License
 

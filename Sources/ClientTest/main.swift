@@ -95,19 +95,19 @@ struct CustomMember {
 }
 
 
+@Pushable
+class BaseClass {
+    public func test() -> String {
+        return "Base"
+    }
+}
 
-//@PushableT(Metatable<ExtraMemberFn>(fields: ["woop": .memberfn { $0._woop() }]))
-//struct ExtraMemberFn {
-//    public func _woop() {}
-//}
+@PushableSubclass<BaseClass>
+class DerivedClass: BaseClass {
+    override func test() -> String {
+        return "Derived"
+    }
 
+    public func derivedfn() {}
 
-//let a = 17
-//let b = 25
-//let (result, code) = #stringify(a + b)
-//print("The value \(result) was produced by the code \"\(code)\"")
-
-//let L = LuaState(libraries: .all)
-//L.setglobal(name: "foo", value: Foo(bar: ""))
-//try L.dostring("print(string.format('%q', foo:wat(1234)))")
-//L.close()
+}
