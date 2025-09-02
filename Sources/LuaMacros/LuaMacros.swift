@@ -29,8 +29,9 @@ public macro Pushable() = #externalMacro(module: "LuaMacrosImpl", type: "Pushabl
 
 /// A macro that generates a metatable for a class whose parent conforms to `PushableWithMetatable`.
 ///
-/// This is similar to ``Pushable()`` but specifically for subclasses. The `Parent` class type parameter should be the
-/// type of the superclass with the metatable. For example:
+/// This is similar to ``Pushable()`` but specifically for subclasses whose parent already uses `@Pushable` (or
+/// otherwise conform to `PushableWithMetatable`). The `Parent` class type parameter should be the type of the
+/// superclass with the metatable. For example:
 ///
 /// ```swift
 /// @Pushable

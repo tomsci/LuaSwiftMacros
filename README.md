@@ -7,7 +7,7 @@ Using just LuaSwift, the shortest declaration for a metatable for a given struct
 ```swift
 import Lua
 
-struct Foo : PushableWithMetatable {
+struct Foo: PushableWithMetatable {
     public func hello() -> String { return "world!" }
 
     static var metatable: Metatable<Foo> { .init(fields: [
@@ -144,7 +144,7 @@ let package = Package(
 
 ## API compatibility
 
-The LuaSwiftMacros project is at an early stage and the API may change without warning. At any given time the head of the main branch will be tested with the head of main branch of LuaSwift, and no compatibility beyond that is guaranteed at this point. It is tested with Swift 6.1 only -- earlier versions definitely will not work, later versions may.
+The LuaSwiftMacros project is at an early stage and the API may change without warning. At any given time the head of the main branch will be tested with the head of main branch of LuaSwift, and no compatibility beyond that is guaranteed at this point. It is tested with Swift 6.1 only - earlier versions definitely will not work, later versions may.
 
 ## More information
 
