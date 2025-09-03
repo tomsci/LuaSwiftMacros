@@ -96,7 +96,7 @@ Some protocols, specifically `Equatable` `Comparable` and `Closable`, are automa
 
 ```swift
 @Pushable
-class Foo : Closable {
+class Foo: Closable {
     public func close() { print("Closed!") }
 }
 ```
@@ -105,7 +105,7 @@ The macro can only check for direct conformance however, so manually specifying 
 
 ```swift
 @Pushable
-struct Foo : Equatable {
+struct Foo: Equatable {
     public let val: Int
 
     // Override the Equatable and make the Lua type _not_ have an eq metamethod
