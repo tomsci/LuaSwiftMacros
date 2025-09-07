@@ -312,7 +312,8 @@ extension PushableMacro: MemberMacro {
         }
 
         if let inheritedTypes = decl.inheritanceClause?.inheritedTypes {
-            // This is a hack because there doesn't seem to be a good way to really nail down the type
+            // Actual type information isn't available here, so all we can do is guess that the name corresponds to the
+            // type we're looking for.
             let conformsToComparable = inheritedTypes.contains(where: { inherited in
                 let name = inherited.type.trimmedDescription
                 return name == "Comparable" || name == "Swift.Comparable"

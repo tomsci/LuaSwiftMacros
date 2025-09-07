@@ -38,3 +38,7 @@ let package = Package(
 ```
 
 The project is hosted here: <https://github.com/tomsci/LuaSwiftMacros>.
+
+## Usage
+
+See [`@Pushable`](doc:Pushable()).
