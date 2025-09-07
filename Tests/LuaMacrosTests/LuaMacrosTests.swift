@@ -278,7 +278,7 @@ final class LuaSwiftMacrosTests: XCTestCase {
 
                 static var metatable: Metatable<NotEq> {
                     .init(fields: [:],
-                        eq: .none)
+                        eq: metafield_eq)
                 }
             }
 

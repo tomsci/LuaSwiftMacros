@@ -59,6 +59,15 @@ extension DeclModifierListSyntax {
         }
         return false
     }
+
+    var isStaticOrClass: Bool {
+        for decl in self {
+            if decl.name.text == "static" || decl.name.text == "class" {
+                return true
+            }
+        }
+        return false
+    }
 }
 
 extension TokenSyntax {
@@ -241,19 +250,18 @@ extension PushableMacro: MemberMacro {
                         continue
                     }
                 }
-                let isStatic = variable.modifiers.isStatic
+                let isStatic = variable.modifiers.isStaticOrClass
                 for binding in variable.bindings {
                     guard let varName = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier.unescapedIdentifierName else {
                         continue
                     }
 
-                    if isStatic && varName.hasPrefix("metafield_"),
-                       let accessor = binding.accessorBlock {
+                    if isStatic && varName.hasPrefix("metafield_") {
                         if luaAttribute != nil {
-                            diagnostic("Cannot @Lua to a metafield", at: variable.attributes)
+                            diagnostic("Cannot apply @Lua to a metafield", at: variable.attributes)
                             continue
                         }
-                        addMetafield(String(varName.suffix(varName.count - 10)), "\(accessor.accessors.trimmedDescription)")
+                        addMetafield(String(varName.suffix(varName.count - 10)), "\(varName)")
                         continue
                     }
 
