@@ -245,7 +245,7 @@ extension PushableMacro: MemberMacro {
                     if !luaAttribute.visible {
                         continue
                     }
-                    if variable.bindings.count > 1 {
+                    if variable.bindings.count > 1 && luaAttribute.name != nil {
                         diagnostic("Cannot apply a variable rename using @Lua(name: ...) to a declaration with multiple variables", at: variable.bindings)
                         continue
                     }
