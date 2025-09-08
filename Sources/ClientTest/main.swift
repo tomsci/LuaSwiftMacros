@@ -80,8 +80,8 @@ struct NotEq : Equatable {
 
 @Pushable
 struct Order {
-    private static var metafield_call: Metatable<Wat>.CallType { .closure { L in return 0 } }
-    private static var metafield_eq: Metatable<Wat>.EqType { .closure { L in L.push(false); return 1 } }
+    private static var metafield_call: Metatable<Order>.CallType { .closure { L in return 0 } }
+    private static var metafield_eq: Metatable<Order>.EqType { .closure { L in L.push(false); return 1 } }
 }
 
 @Pushable
@@ -110,4 +110,12 @@ class DerivedClass: BaseClass {
 
     public func derivedfn() {}
 
+}
+
+@Pushable
+struct GenericWarning {
+    @Lua(false)
+    public func gen<T>(_ val: T) -> T {
+        return val
+    }
 }

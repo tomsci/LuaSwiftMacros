@@ -294,8 +294,8 @@ extension PushableMacro: MemberMacro {
                     continue
                 }
 
-                // Technically genericParamters in the return type would be ok, so should really iterate all the arg types.
                 if (fn.genericParameterClause != nil) {
+                    diagnostic("Cannot bridge functions with generic parameters, specify @Lua(false) to prevent this warning.", severity: .warning, at: fn)
                     continue
                 }
 
