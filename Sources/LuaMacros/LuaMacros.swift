@@ -14,20 +14,3 @@ public macro PushableSubclass<Parent>() = #externalMacro(module: "LuaMacrosImpl"
 @attached(peer, names: arbitrary)
 public macro Lua(_ visible: Bool = true, name: String? = nil)
     = #externalMacro(module: "LuaMacrosImpl", type: "LuaAttributeMacro")
-
-public enum EqType {
-    case synthesize
-}
-
-//public class _MaybeClosable: Closable {}
-
-// @freestanding(declaration, names: arbitrary)
-// public macro eq(_: ()->EqType) = #externalMacro(module: "LuaMacrosImpl", type: "MetafieldMacro")
-
-
-// @freestanding(declaration, names: arbitrary)
-// public macro eq(_: LuaClosure) = #externalMacro(module: "LuaMacrosImpl", type: "MetafieldMacro")
-
-
-// @freestanding(declaration, names: arbitrary)
-// public macro close<T: Self>(_: () -> Metatable<T>.CloseType) = #externalMacro(module: "LuaMacrosImpl", type: "MetafieldMacro")
