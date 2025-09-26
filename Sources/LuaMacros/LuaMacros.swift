@@ -7,10 +7,13 @@ import Lua
 @attached(extension, conformances: PushableWithMetatable)
 public macro Pushable() = #externalMacro(module: "LuaMacrosImpl", type: "PushableMacro")
 
+@attached(member, names: named(metatable))
+@attached(extension, conformances: PushableWithMetatable)
+public macro PushableEnum(typeName: String?) = #externalMacro(module: "LuaMacrosImpl", type: "PushableMacro")
 
 @attached(member, names: named(metatable))
 public macro PushableSubclass<Parent>() = #externalMacro(module: "LuaMacrosImpl", type: "PushableMacro")
 
 @attached(peer, names: arbitrary)
-public macro Lua(_ visible: Bool = true, name: String? = nil)
+public macro Lua(_ visible: Bool = true, name: String... = [])
     = #externalMacro(module: "LuaMacrosImpl", type: "LuaAttributeMacro")

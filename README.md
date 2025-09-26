@@ -33,7 +33,7 @@ The `@Pushable` macro adds conformance to `PushableWithMetatable` and a `metatab
 
 ## Usage/Limitations
 
-* `@Pushable` can only be added to structs and classes, since these are the only types intended to be bridged. 
+* `@Pushable` can be added to structs, classes and enums.
 * By default, all public properties and functions will be added to the metatable. Customize with `@Lua`, see below.
 * Both computed and stored member properties are supported. Static stored (`static let foo = ...`) and computed properies (`static var foo { ... }`) are also supported.
 * Functions with generic parameters are not supported and will be skipped over.

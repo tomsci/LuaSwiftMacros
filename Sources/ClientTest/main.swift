@@ -13,6 +13,7 @@ struct Foo {
         return "\(arg)"
     }
 
+    @Lua(false)
     public func nope<T>(_ arg: T) -> T {
         return arg
     }
@@ -112,10 +113,23 @@ class DerivedClass: BaseClass {
 
 }
 
-@Pushable
-struct GenericWarning {
-    @Lua(false)
-    public func gen<T>(_ val: T) -> T {
-        return val
-    }
+@PushableEnum(typeName: nil)
+enum ValuedEnum: Equatable {
+    case foo
+    case bar_value
+
+    @Lua(name: "barval")
+    case bar(Int)
+
+    @Lua(name: "bazInt", "bazStr")
+    case baz(Int, String)
+
+    private static var metafield_tostring: Metatable<ValuedEnum>.TostringType { .synthesize }
+
+}
+
+@PushableEnum(typeName: nil)
+enum Example: Equatable, CaseIterable {
+    case foo
+    case bar
 }

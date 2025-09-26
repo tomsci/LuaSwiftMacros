@@ -26,6 +26,8 @@ import LuaMacrosImpl
 
 let testMacros: [String: Macro.Type] = [
     "Pushable": PushableMacro.self,
+    "PushableSubclass": PushableMacro.self,
+    "PushableEnum": PushableMacro.self,
     "Lua": LuaAttributeMacro.self,
 ]
 
@@ -359,6 +361,277 @@ final class LuaSwiftMacrosTests: XCTestCase {
             }
             
             extension Foo: PushableWithMetatable {
+            }
+            """#,
+            macros: testMacros)
+    }
+
+    func testSubclass() throws {
+        assertMacroExpansion(
+            """
+            @PushableSubclass<BaseClass>
+            class DerivedClass: BaseClass {
+                override func test() -> String {
+                    return "Derived"
+                }
+            
+                public func derivedfn() {}
+            }
+            """,
+            expandedSource: #"""
+            class DerivedClass: BaseClass {
+                override func test() -> String {
+                    return "Derived"
+                }
+            
+                public func derivedfn() {}
+            
+                class override var metatable: Metatable<BaseClass> {
+                    BaseClass.metatable.subclass(type: DerivedClass.self, fields: [
+                            "derivedfn": .memberfn {
+                                    $0.derivedfn()
+                                }
+                        ])
+                }
+            }
+            """#,
+            macros: testMacros)
+    }
+
+    func testEnum() throws {
+        assertMacroExpansion(
+            """
+            @Pushable
+            enum Foo {
+                case foo
+                case bar
+            }
+            """,
+            expandedSource: #"""
+            enum Foo {
+                case foo
+                case bar
+            
+                static var metatable: Metatable<Foo> {
+                    .init(fields: [
+                            "type": .property(get: {
+                                        switch $0 {
+                                        case .foo:
+                                            return "foo"
+                                        case .bar:
+                                            return "bar"
+                                        }
+                                    })
+                        ])
+                }
+            }
+            
+            extension Foo: PushableWithMetatable {
+            }
+            """#,
+            macros: testMacros)
+    }
+
+    func testEnumRenameType() throws {
+        assertMacroExpansion(
+            """
+            @PushableEnum(typeName: "_type")
+            enum Foo {
+                case foo
+                case bar
+            }
+            """,
+            expandedSource: #"""
+            enum Foo {
+                case foo
+                case bar
+            
+                static var metatable: Metatable<Foo> {
+                    .init(fields: [
+                            "_type": .property(get: {
+                                        switch $0 {
+                                        case .foo:
+                                            return "foo"
+                                        case .bar:
+                                            return "bar"
+                                        }
+                                    })
+                        ])
+                }
+            }
+            
+            extension Foo: PushableWithMetatable {
+            }
+            """#,
+            macros: testMacros)
+    }
+
+    func testEnumNoType() throws {
+        assertMacroExpansion(
+            """
+            @PushableEnum(typeName: nil)
+            enum Foo: Equatable {
+                case foo
+                case bar
+            }
+            """,
+            expandedSource: #"""
+            enum Foo: Equatable {
+                case foo
+                case bar
+            
+                static var metatable: Metatable<Foo> {
+                    .init(fields: [:],
+                        eq: .synthesize)
+                }
+            }
+            
+            extension Foo: PushableWithMetatable {
+            }
+            """#,
+            macros: testMacros)
+    }
+
+    func testEnumAssociatedValues() throws {
+        assertMacroExpansion(
+            """
+            @Pushable
+            enum Foo {
+                case foo
+                case bar(Int)
+                case baz(String, Int)
+                @Lua(name: "batval") case bat(Int)
+                @Lua(name: "borpstr", "borpint")
+                case borp(String, Int)
+            }
+            """,
+            expandedSource: #"""
+            enum Foo {
+                case foo
+                case bar(Int)
+                case baz(String, Int)
+                case bat(Int)
+                case borp(String, Int)
+            
+                static var metatable: Metatable<Foo> {
+                    .init(fields: [
+                            "bar_value": .property(get: { obj -> Optional<Int> in
+                                        if case .bar(let value) = obj {
+                                            return value
+                                        } else {
+                                            return nil
+                                        }
+                                    }),
+                            "baz_1": .property(get: { obj -> Optional<String> in
+                                        if case .baz(let value, _) = obj {
+                                            return value
+                                        } else {
+                                            return nil
+                                        }
+                                    }),
+                            "baz_2": .property(get: { obj -> Optional<Int> in
+                                        if case .baz(_, let value) = obj {
+                                            return value
+                                        } else {
+                                            return nil
+                                        }
+                                    }),
+                            "batval": .property(get: { obj -> Optional<Int> in
+                                        if case .bat(let value) = obj {
+                                            return value
+                                        } else {
+                                            return nil
+                                        }
+                                    }),
+                            "borpstr": .property(get: { obj -> Optional<String> in
+                                        if case .borp(let value, _) = obj {
+                                            return value
+                                        } else {
+                                            return nil
+                                        }
+                                    }),
+                            "borpint": .property(get: { obj -> Optional<Int> in
+                                        if case .borp(_, let value) = obj {
+                                            return value
+                                        } else {
+                                            return nil
+                                        }
+                                    }),
+                            "type": .property(get: {
+                                        switch $0 {
+                                        case .foo:
+                                            return "foo"
+                                        case .bar(_):
+                                            return "bar"
+                                        case .baz(_, _):
+                                            return "baz"
+                                        case .bat(_):
+                                            return "bat"
+                                        case .borp(_, _):
+                                            return "borp"
+                                        }
+                                    })
+                        ])
+                }
+            }
+            
+            extension Foo: PushableWithMetatable {
+            }
+            """#,
+            macros: testMacros)
+    }
+
+    func testNamedTupleEnum() {
+        assertMacroExpansion(
+            """
+            @Pushable
+            enum NamedTupleEnum: Equatable {
+                case foo(someint: Int)
+                case bar(barstr: String, bval: Int)
+            }
+            """,
+            expandedSource: #"""
+            enum NamedTupleEnum: Equatable {
+                case foo(someint: Int)
+                case bar(barstr: String, bval: Int)
+
+                static var metatable: Metatable<NamedTupleEnum> {
+                    .init(fields: [
+                            "someint": .property(get: { obj -> Optional<Int> in
+                                        if case .foo(let value) = obj {
+                                            return value
+                                        } else {
+                                            return nil
+                                        }
+                                    }),
+                            "barstr": .property(get: { obj -> Optional<String> in
+                                        if case .bar(let value, _) = obj {
+                                            return value
+                                        } else {
+                                            return nil
+                                        }
+                                    }),
+                            "bval": .property(get: { obj -> Optional<Int> in
+                                        if case .bar(_, let value) = obj {
+                                            return value
+                                        } else {
+                                            return nil
+                                        }
+                                    }),
+                            "type": .property(get: {
+                                        switch $0 {
+                                        case .foo(_):
+                                            return "foo"
+                                        case .bar(_, _):
+                                            return "bar"
+                                        }
+                                    })
+                        ],
+                        eq: .synthesize)
+                }
+            }
+            
+            extension NamedTupleEnum: PushableWithMetatable {
             }
             """#,
             macros: testMacros)

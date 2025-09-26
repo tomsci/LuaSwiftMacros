@@ -114,8 +114,11 @@ internal struct LuaDiagnosticMsg : DiagnosticMessage {
 }
 
 internal struct LuaAttribute {
+    let node: AttributeSyntax
     let visible: Bool
-    let name: String?
+    let names: [String]
+
+    var name: String? { names.first }
 }
 
 public struct PushableMacro {
@@ -126,13 +129,13 @@ public struct PushableMacro {
         context.diagnose(Diagnostic(node: Syntax(node), message: msg))
     }
 
-    static func getLuaAttribute(_ attributeList: AttributeListSyntax, context: some MacroExpansionContext) -> LuaAttribute? {
+    static func getLuaAttribute(_ attributeList: AttributeListSyntax, context: some MacroExpansionContext, isCase: Bool = false) -> LuaAttribute? {
         guard let attrib = attributeList.attributeNamed("Lua")
         else {
             return nil
         }
         if attrib.arguments == nil {
-            return LuaAttribute(visible: true, name: nil)
+            return LuaAttribute(node: attrib, visible: true, names: [])
         }
 
         guard let args = attrib.arguments?.as(LabeledExprListSyntax.self)
@@ -146,19 +149,39 @@ public struct PushableMacro {
         }
         if args.count == 0 {
             // Same as @Lua(true)
-            return LuaAttribute(visible: true, name: nil)
+            return LuaAttribute(node: attrib, visible: true, names: [])
         }
 
-        if args.count != 1 {
-            return badsyntax()
-        }
         let param = args.first!
-        if param.label == nil && param.expression.as(BooleanLiteralExprSyntax.self)?.literal.text == "false" {
-            return LuaAttribute(visible: false, name: nil)
+
+        if param.label?.text == "name" {
+            guard let name = param.expression.as(StringLiteralExprSyntax.self)?.singleStringLiteral else {
+                return badsyntax()
+            }
+            var names = [name]
+            if isCase {
+                // More than one name is allowed (and is checked by the caller)
+                for (i, arg) in args.enumerated() {
+                    if i == 0 {
+                        continue
+                    }
+                    guard arg.label == nil, let nextName = arg.expression.as(StringLiteralExprSyntax.self)?.singleStringLiteral else {
+                        diagnostic("Expected @Lua(name: \"firstValName\", [\"secondValName\", ...])", at: arg, context: context)
+                        return nil
+                    }
+                    names.append(nextName)
+                }
+            } else {
+                if args.count != 1 {
+                    return badsyntax()
+                }
+            }
+
+            return LuaAttribute(node: attrib, visible: true, names: names)
         }
-        if param.label?.text == "name",
-           let name = param.expression.as(StringLiteralExprSyntax.self)?.singleStringLiteral {
-            return LuaAttribute(visible: true, name: name)
+
+        if args.count == 1 && param.label == nil && param.expression.as(BooleanLiteralExprSyntax.self)?.literal.text == "false" {
+            return LuaAttribute(node: attrib, visible: false, names: [])
         }
 
         return badsyntax()
@@ -173,6 +196,14 @@ extension PushableMacro: ExtensionMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
+        // This fn is never called for PushableSubclass in real use, but the tests do not account for the lack of
+        // @attached(extension) in LuaMacros (I assume they just introspect whatever PushableMacro conforms to) so we
+        // have to have this check.
+        let macroName = node.attributeName.as(IdentifierTypeSyntax.self)!.name.text
+        if macroName == "PushableSubclass" {
+            return []
+        }
+
         return [try ExtensionDeclSyntax(
             """
             extension \(type): PushableWithMetatable {}
@@ -194,7 +225,11 @@ extension PushableMacro: MemberMacro {
 
         var fields: [String: String] = [:]
         var fieldOrder: [String] = []
-        func addField(_ k: String, _ v: String) {
+        func addField(_ k: String, _ v: String, node: some SyntaxProtocol) {
+            guard fields[k] == nil else {
+                diagnostic("@Pushable macro has resulted in duplicate field definition for \(k) - try using @Lua(name:) to rename one of them?", at: node)
+                return
+            }
             fields[k] = v
             fieldOrder.append(k)
         }
@@ -205,8 +240,11 @@ extension PushableMacro: MemberMacro {
             metaFields[k] = v
         }
 
+        let macroIdentifier = node.attributeName.as(IdentifierTypeSyntax.self)!
+        let macroName = macroIdentifier.name.text
+
         var parentType: String? = nil
-        let genericParams = node.attributeName.as(IdentifierTypeSyntax.self)?.genericArgumentClause?.arguments
+        let genericParams = macroIdentifier.genericArgumentClause?.arguments
         if let genericParams {
             if genericParams.count != 1 {
                 diagnostic("Expected @PushableSubclass<ParentType>", at: node)
@@ -215,21 +253,35 @@ extension PushableMacro: MemberMacro {
             parentType = genericParams.first!.argument.as(IdentifierTypeSyntax.self)?.name.text
         }
 
-        // // Gather any overrides to fields or metafields
-        // if case .argumentList(let params) = node.arguments {
-        //     for param in params {
-        //         if param.label == "parent" {
-        //             parentExpr = param.expression
-        //         }
-        //     }
-        // }
+        // Check for any params
+        var enumTypeField: String? = "type"
+        if case .argumentList(let params) = node.arguments {
+            for param in params {
+                if macroName == "PushableEnum" && param.label?.text == "typeName" {
+                    if param.expression.as(NilLiteralExprSyntax.self) != nil {
+                        enumTypeField = nil
+                    } else if let str = param.expression.as(StringLiteralExprSyntax.self)?.singleStringLiteral {
+                        enumTypeField = str
+                    } else {
+                        diagnostic("typeName must be a single string literal", at: param.expression)
+                        return []
+                    }
+                } else {
+                    preconditionFailure("Unexpected parameter in macro")
+                }
+            }
+        }
 
+        let enumDecl = decl.as(EnumDeclSyntax.self)
+        if enumDecl == nil {
+            enumTypeField = nil
+        }
         let structDecl = decl.as(StructDeclSyntax.self)
         let classDecl = decl.as(ClassDeclSyntax.self)
         let varType = StringLiteralType(classDecl != nil ? "class" : "static")
 
-        guard let typeName = structDecl?.name.text ?? classDecl?.name.text else {
-            diagnostic("@Pushable must be attached to a struct or class", at: decl)
+        guard let typeName = structDecl?.name.text ?? classDecl?.name.text ?? enumDecl?.name.text else {
+            diagnostic("@Pushable must be attached to a struct, class or enum", at: decl)
             return []
         }
 
@@ -238,8 +290,67 @@ extension PushableMacro: MemberMacro {
             return []
         }
 
+        if macroName == "PushableEnum" && enumDecl == nil {
+            diagnostic("@PushableEnum can only be applied to an enum", at: node)
+            return []
+        }
+
+        var enumCaseNames: [String] = []
+        var enumValCount: [String : Int] = [:]
+
         for member in decl.memberBlock.members {
+            // enum case declaration
+            if let caseDecl = member.decl.as(EnumCaseDeclSyntax.self) {
+                let luaAttribute = getLuaAttribute(caseDecl.attributes, context: context, isCase: true)
+                if luaAttribute != nil && caseDecl.elements.count != 1 {
+                    diagnostic("Cannot apply @Lua to a case statement with multiple elements", at: caseDecl)
+                    enumTypeField = nil
+                    break
+                }
+                for element in caseDecl.elements {
+                    let name = element.name.text
+                    enumCaseNames.append(name)
+                    if let parameterClause = element.parameterClause {
+                        if let luaAttribute, luaAttribute.names.count != parameterClause.parameters.count {
+                            diagnostic("@Lua(name: ...) applied to a case statament must have the same number of names as there are associated values", at: luaAttribute.node)
+                            enumTypeField = nil
+                            break
+                        }
+                        enumValCount[name] = parameterClause.parameters.count
+                        for (i, param) in parameterClause.parameters.enumerated() {
+                            let namedParameterName = param.firstName?.text
+                            var clause: String
+                            if i == 0 {
+                                clause = "let value"
+                            } else {
+                                clause = Array(repeating: "_", count: i).joined(separator: ", ") + ", let value"
+                            }
+                            if i + 1 < parameterClause.parameters.count {
+                                clause = clause + ", " + Array(repeating: "_", count: parameterClause.parameters.count - (i + 1)).joined(separator: ", ")
+                            }
+                            let fieldName: String
+                            if let luaAttribute {
+                                fieldName = luaAttribute.names[i]
+                            } else if let namedParameterName, fields[namedParameterName] == nil {
+                                fieldName = namedParameterName
+                            } else if parameterClause.parameters.count == 1 || namedParameterName != nil {
+                                fieldName = "\(name)_\(namedParameterName ?? "value")"
+                            } else {
+                                fieldName = "\(name)_\(i+1)"
+                            }
+                            addField(fieldName, """
+                                .property(get: { obj -> Optional<\(param.type)> in
+                                if case .\(name)(\(clause)) = obj { return value } else { return nil } })
+                                """, node: param)
+                        }
+                    } else {
+                        enumValCount[name] = 0
+                    }
+                }
+            }
+
             if let variable = member.decl.as(VariableDeclSyntax.self) {
+                // variable declaration
                 let luaAttribute = getLuaAttribute(variable.attributes, context: context)
                 if let luaAttribute {
                     if !luaAttribute.visible {
@@ -271,15 +382,16 @@ extension PushableMacro: MemberMacro {
                     }
                     if isStatic {
                         if variable.bindingSpecifier.text == "let" {
-                            addField(fieldName, ".constant(\(typeName).\(varName))")
+                            addField(fieldName, ".constant(\(typeName).\(varName))", node: binding)
                         } else {
-                            addField(fieldName, ".staticvar { return \(typeName).\(varName) }")
+                            addField(fieldName, ".staticvar { return \(typeName).\(varName) }", node: binding)
                         }
                     } else {
-                        addField(fieldName, ".property(\\.\(varName))")
+                        addField(fieldName, ".property(\\.\(varName))", node: binding)
                     }
                 }
             } else if let fn = member.decl.as(FunctionDeclSyntax.self) {
+                // function declaration
                 guard let fnName = fn.name.unescapedIdentifierName else {
                     continue
                 }
@@ -312,11 +424,21 @@ extension PushableMacro: MemberMacro {
                 }
                 let fieldName = luaAttribute?.name ?? fnName
                 if isStaticFn {
-                    addField(fieldName, ".staticfn { \(typeName).\(fnName)(\(args.joined(separator: ","))) }")
+                    addField(fieldName, ".staticfn { \(typeName).\(fnName)(\(args.joined(separator: ","))) }", node: fn)
                 } else {
-                    addField(fieldName, ".memberfn { $0.\(fnName)(\(args.joined(separator: ","))) }")
+                    addField(fieldName, ".memberfn { $0.\(fnName)(\(args.joined(separator: ","))) }", node: fn)
                 }
             }
+        }
+
+        if let enumTypeField {
+            var cases: [String] = []
+            for caseName in enumCaseNames {
+                let numParams = enumValCount[caseName]!
+                let params = numParams == 0 ? "" : "(" + Array(repeating: "_", count: numParams).joined(separator: ", ") + ")"
+                cases.append("case .\(caseName)\(params): return \"\(caseName)\"")
+            }
+            addField(enumTypeField, ".property(get: { switch $0 { \(cases.joined(separator: "\n")) } })", node: enumDecl!)
         }
 
         if let inheritedTypes = decl.inheritanceClause?.inheritedTypes {

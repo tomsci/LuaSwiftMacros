@@ -43,4 +43,17 @@ class Foo {
 }
 ```
 
-> Note: Do not use the `@Lua` macro outside of a struct/class decorated with `@Pushable` (or `@PushableSubclass`). It will have no effect, and in future versions may cause a compile error.
+`@Lua(name: "newname", ...)` can also be used to override the default name given to associated value(s) in an enum case. The number of `name` arguments must match the number of associated values. See [Pushable Enums](doc:Pushable()#Enums) for more information.
+
+```swift
+enum Foo {
+    @Lua(name: "fooval")
+    case foo(Int)
+
+    // The Int value is called "barint", the String value "barstr".
+    @Lua(name: "barint", "barstr")
+    case bar(Int, String)
+}
+```
+
+> Note: Do not use the `@Lua` macro outside of a struct/class/enum decorated with `@Pushable` (or `@PushableSubclass` or `@PushableEnum`). It will have no effect, and in future versions may cause a compile error.
