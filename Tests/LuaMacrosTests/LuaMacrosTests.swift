@@ -424,6 +424,16 @@ final class LuaSwiftMacrosTests: XCTestCase {
                                     })
                         ])
                 }
+            
+                static var metaobject: Metaobject<Foo> {
+                    .init(metatable: Foo.metatable, fields: [
+                            "foo": .staticvar {
+                                    return Foo.foo
+                                },
+                            "bar": .staticvar {
+                                    return Foo.bar
+                                }])
+                }
             }
             
             extension Foo: PushableWithMetatable {
@@ -458,6 +468,16 @@ final class LuaSwiftMacrosTests: XCTestCase {
                                     })
                         ])
                 }
+            
+                static var metaobject: Metaobject<Foo> {
+                    .init(metatable: Foo.metatable, fields: [
+                            "foo": .staticvar {
+                                    return Foo.foo
+                                },
+                            "bar": .staticvar {
+                                    return Foo.bar
+                                }])
+                }
             }
             
             extension Foo: PushableWithMetatable {
@@ -483,6 +503,16 @@ final class LuaSwiftMacrosTests: XCTestCase {
                 static var metatable: Metatable<Foo> {
                     .init(fields: [:],
                         eq: .synthesize)
+                }
+            
+                static var metaobject: Metaobject<Foo> {
+                    .init(metatable: Foo.metatable, fields: [
+                            "foo": .staticvar {
+                                    return Foo.foo
+                                },
+                            "bar": .staticvar {
+                                    return Foo.bar
+                                }])
                 }
             }
             
@@ -573,6 +603,25 @@ final class LuaSwiftMacrosTests: XCTestCase {
                                     })
                         ])
                 }
+            
+                static var metaobject: Metaobject<Foo> {
+                    .init(metatable: Foo.metatable, fields: [
+                            "foo": .staticvar {
+                                    return Foo.foo
+                                },
+                            "bar": .staticfn {
+                                    return Foo.bar($0)
+                                },
+                            "baz": .staticfn {
+                                    return Foo.baz($0, $1)
+                                },
+                            "bat": .staticfn {
+                                    return Foo.bat($0)
+                                },
+                            "borp": .staticfn {
+                                    return Foo.borp($0, $1)
+                                }])
+                }
             }
             
             extension Foo: PushableWithMetatable {
@@ -628,6 +677,16 @@ final class LuaSwiftMacrosTests: XCTestCase {
                                     })
                         ],
                         eq: .synthesize)
+                }
+
+                static var metaobject: Metaobject<NamedTupleEnum> {
+                    .init(metatable: NamedTupleEnum.metatable, fields: [
+                            "foo": .staticfn {
+                                    return NamedTupleEnum.foo(someint: $0)
+                                },
+                            "bar": .staticfn {
+                                    return NamedTupleEnum.bar(barstr: $0, bval: $1)
+                                }])
                 }
             }
             

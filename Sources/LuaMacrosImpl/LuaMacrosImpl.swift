@@ -240,6 +240,17 @@ extension PushableMacro: MemberMacro {
             metaFields[k] = v
         }
 
+        var metaobjFields: [String: String] = [:]
+        var metaobjFieldOrder: [String] = []
+        func addMetaobjField(_ k: String, _ v: String, node: some SyntaxProtocol) {
+            guard metaobjFields[k] == nil else {
+                diagnostic("@Pushable macro has resulted in duplicate metaobj field definition for \(k) - try using @Lua(name:) to rename one of them?", at: node)
+                return
+            }
+            metaobjFields[k] = v
+            metaobjFieldOrder.append(k)
+        }
+
         let macroIdentifier = node.attributeName.as(IdentifierTypeSyntax.self)!
         let macroName = macroIdentifier.name.text
 
@@ -317,6 +328,7 @@ extension PushableMacro: MemberMacro {
                             break
                         }
                         enumValCount[name] = parameterClause.parameters.count
+                        var constructorParams: [String] = []
                         for (i, param) in parameterClause.parameters.enumerated() {
                             let namedParameterName = param.firstName?.text
                             var clause: String
@@ -342,9 +354,16 @@ extension PushableMacro: MemberMacro {
                                 .property(get: { obj -> Optional<\(param.type)> in
                                 if case .\(name)(\(clause)) = obj { return value } else { return nil } })
                                 """, node: param)
+                            if let namedParameterName {
+                                constructorParams.append("\(namedParameterName): $\(i)")
+                            } else {
+                                constructorParams.append("$\(i)")
+                            }
                         }
+                        addMetaobjField(name, ".staticfn { return \(typeName).\(name)(\(constructorParams.joined(separator: ", "))) }", node: element)
                     } else {
                         enumValCount[name] = 0
+                        addMetaobjField(name, ".staticvar { return \(typeName).\(name) }", node: element)
                     }
                 }
             }
@@ -492,9 +511,17 @@ extension PushableMacro: MemberMacro {
                 "class override var metatable: Metatable<\(raw: parentType)> { \(raw: parentType).metatable.subclass(type: \(raw: typeName).self, \(raw: initArgs.joined(separator: ",\n")))}"
             ]
         } else {
-            return [
+            var result: [DeclSyntax] = [
                 "\(raw: varType) var metatable: Metatable<\(raw: typeName)> { .init(\(raw: initArgs.joined(separator: ",\n")))}"
             ]
+            if !metaobjFields.isEmpty {
+                var pairs: [String] = []
+                for name in metaobjFieldOrder {
+                    pairs.append("\"\(name)\": \(metaobjFields[name]!)")
+                }
+                result.append("static var metaobject: Metaobject<\(raw: typeName)> { .init(metatable: \(raw: typeName).metatable, fields: [\n\(raw: pairs.joined(separator: ",\n"))]) }")
+            }
+            return result
         }
     }
 }

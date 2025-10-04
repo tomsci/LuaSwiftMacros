@@ -83,12 +83,13 @@ struct Foo: Equatable {
 * Any case with a single associated value adds a property called `<casename>_value`. This property is `nil` for any instance of the enum that is not of this case. If the associated value has a name (ie the parameter clause is a named tuple) which doesn't conflict with anything else, that name is used for the property instead.
 * If a case has multiple associated values multiple properties are added as above, except that they are named `<casename>_1`, `<casename>_2` etc if the associated values are unnamed.
 * Associated value names can be customised using the `@Lua(name:)` macro.
+* Enum constructors (either static variables, or functions for cases with associated values) are exposed in a pushable `metaobject` property, of type [`Metaobject`](https://tomsci.github.io/LuaSwift/documentation/lua/metaobject).
 
 For example an enum like this:
 
 ```swift
 @Pushable
-enum Example {
+enum Example: Equatable {
     case simple
     case onevalue(String)
     case twovals(Int, String)
@@ -111,6 +112,18 @@ function describeEnumVal(val)
     end
 end
 ```
+
+The generated `metaobject` permits the enum to constructed from Lua side, for example (using `Example` from above):
+
+```swift
+L.setglobal(name: "Example", value: Example.metaobject)
+try L.dostring("print(Example.onevalue('hello').onevalue_value)")
+// Prints "hello"
+```
+
+The above Lua code (in the `dostring` call) constructs an instance of `Example` using the `onevalue` constructor function from the metaobject, and then prints the associated value from that value, using the `onevalue_value` property from the metatable.
+
+> Note: It is possible to write comparison code, for example `if val == Example.onevalue("hello") then ...` only if the metatable defines an `eq` metamethod by for instance conforming to `Equatable` as `Example` above does. Unlike Swift, it is not an error to test values for equality when they don't define an `eq` metamethod, the comparison will just return `false` which can lead to unexpected behaviour and difficult to track down bugs. It is therefore generally a good idea to ensure all enum metatables define `eq`.
 
 To customize the associated value property names, use [`@Lua(name: ...)`](doc:Lua(_:name:)), passing multiple names if there is more than one associated value:
 

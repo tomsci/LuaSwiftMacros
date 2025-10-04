@@ -3,11 +3,11 @@
 
 import Lua
 
-@attached(member, names: named(metatable))
+@attached(member, names: named(metatable), named(metaobject))
 @attached(extension, conformances: PushableWithMetatable)
 public macro Pushable() = #externalMacro(module: "LuaMacrosImpl", type: "PushableMacro")
 
-@attached(member, names: named(metatable))
+@attached(member, names: named(metatable), named(metaobject))
 @attached(extension, conformances: PushableWithMetatable)
 public macro PushableEnum(typeName: String?) = #externalMacro(module: "LuaMacrosImpl", type: "PushableMacro")
 

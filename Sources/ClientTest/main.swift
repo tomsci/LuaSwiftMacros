@@ -113,7 +113,7 @@ class DerivedClass: BaseClass {
 
 }
 
-@PushableEnum(typeName: nil)
+@Pushable
 enum ValuedEnum: Equatable {
     case foo
     case bar_value
@@ -124,12 +124,34 @@ enum ValuedEnum: Equatable {
     @Lua(name: "bazInt", "bazStr")
     case baz(Int, String)
 
-    private static var metafield_tostring: Metatable<ValuedEnum>.TostringType { .synthesize }
-
 }
 
-@PushableEnum(typeName: nil)
-enum Example: Equatable, CaseIterable {
-    case foo
-    case bar
+
+@Pushable
+enum NamedTupleEnum: Equatable {
+    case foo(someint: Int)
+    case bar(barstr: String, bval: Int)
 }
+
+//@PushableEnum(typeName: nil)
+//enum Example: Equatable, CaseIterable {
+//    case foo
+//    case bar
+//}
+
+let L = LuaState(libraries: .all)
+//L.setglobal(name: "val", value: ValuedEnum.foo)
+//try L.dostring("print(val)")
+//L.pushMetatable(for: ValuedEnum.self)
+//L.setglobal(name: "ValuedEnum")
+
+L.setglobal(name: "V", value: ValuedEnum.metaobject)
+//try L.dostring("print(V.foo, V.bar_value, V.bar(123), V.baz(456, 'hello'))")
+//try L.dostring("for k,v in pairs(V) do print(k,v) end; print('done')")
+//try L.dostring("print(V.bar(123) == V.bar(123))")
+
+L.setglobal(name: "N", value: NamedTupleEnum.metaobject)
+try L.dostring("print(N.foo(42).someint)")
+
+//L.setglobal(name: "Example", value: .enum(Example.self))
+//try L.dostring("print(Example.foo == Example.foo)")
